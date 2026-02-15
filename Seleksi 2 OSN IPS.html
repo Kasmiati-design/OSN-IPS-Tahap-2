@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UJIAN OSN IPS - SDN 002</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4f46e5; --success: #22c55e; --danger: #ef4444;
+            --bg-gradient: linear-gradient(135deg, #f5d0fe 0%, #fbcfe8 50%, #fde68a 100%);
+        }
+        * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { margin: 0; background: var(--bg-gradient); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 15px; }
+        
+        .app-window { width: 100%; max-width: 1100px; background: #ffffff; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); overflow: hidden; min-height: 650px; display: flex; flex-direction: column; position: relative; }
+        .app-header { padding: 15px 25px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; background: white; z-index: 10; }
+        .app-header h1 { font-size: 16px; color: var(--primary); margin: 0; font-weight: 800; }
+        .admin-gear { cursor: pointer; color: #94a3b8; font-size: 12px; font-weight: 600; border: 1px solid #e2e8f0; padding: 5px 10px; border-radius: 8px; }
+
+        .screen { display: none; padding: 25px; flex-grow: 1; animation: fadeIn 0.4s ease; }
+        .screen.active { display: flex; flex-direction: column; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Login */
+        .welcome-box { max-width: 400px; margin: auto; text-align: center; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 2px solid #e2e8f0; border-radius: 12px; outline: none; transition: 0.3s; }
+        input:focus { border-color: var(--primary); }
+        .btn-start { background: linear-gradient(90deg, #6366f1, #a855f7); color: white; border: none; padding: 16px; width: 100%; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 16px; }
+
+        /* Quiz */
+        .quiz-grid { display: grid; grid-template-columns: 1fr 300px; gap: 25px; }
+        .narasi-box { background: #fffbeb; border: 1px solid #fef3c7; border-left: 5px solid #f59e0b; padding: 18px; border-radius: 12px; font-size: 14px; margin-bottom: 15px; color: #92400e; line-height: 1.6; }
+        .question-text { font-size: 17px; font-weight: 700; margin-bottom: 20px; color: #1e293b; }
+        .options-grid { display: grid; gap: 10px; }
+        .opt { background: white; border: 2px solid #f1f5f9; padding: 14px; border-radius: 12px; cursor: pointer; transition: 0.2s; display: flex; align-items: flex-start; }
+        .opt:hover { border-color: var(--primary); background: #f8fafc; }
+        .opt.selected { background: var(--primary); color: white; border-color: var(--primary); }
+        .opt b { margin-right: 12px; min-width: 20px; }
+
+        /* Sidebar */
+        .sidebar { background: #f8fafc; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; border: 1px solid #e2e8f0; }
+        .timer { font-size: 32px; font-weight: 800; text-align: center; color: var(--danger); margin-bottom: 15px; font-variant-numeric: tabular-nums; }
+        .nav-dots { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; overflow-y: auto; max-height: 300px; padding-right: 5px; }
+        .dot { aspect-ratio: 1; border-radius: 8px; border: none; color: white; font-weight: 700; font-size: 11px; cursor: pointer; }
+        .dot.red { background: var(--danger); }
+        .dot.green { background: var(--success); }
+        .dot.active { outline: 3px solid #1e293b; outline-offset: 2px; }
+
+        /* Admin Table */
+        .admin-table-container { overflow-x: auto; background: white; border-radius: 12px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px; border: 1px solid #e2e8f0; text-align: left; font-size: 12px; }
+        th { background: var(--primary); color: white; }
+
+        @media (max-width: 850px) {
+            .quiz-grid { grid-template-columns: 1fr; }
+            .sidebar { order: -1; }
+        }
+    </style>
+</head>
+<body oncontextmenu="return false;">
+
+<div class="app-window">
+    <div class="app-header">
+        <h1>SELEKSI OSN IPS - SDN 002</h1>
+        <div class="admin-gear" onclick="openAdmin()">⚙️ PANEL ADMIN</div>
+    </div>
+
+    <div id="scr-login" class="screen active">
+        <div class="welcome-box">
+            <h2 style="font-size: 28px; font-weight: 800; margin-bottom: 10px;">Selamat Datang!</h2>
+            <p style="color: #64748b; margin-bottom: 25px; font-size: 14px;">Silakan lengkapi biodata pengerjaan ujian.</p>
+            <input type="text" id="ipt-nama" placeholder="Nama Lengkap">
+            <input type="text" id="ipt-kelas" placeholder="Kelas (Contoh: 5A)">
+            <input type="number" id="ipt-hp" placeholder="Nomor WhatsApp (Aktif)">
+            <button class="btn-start" onclick="startQuiz()">MULAI UJIAN SEKARANG</button>
+        </div>
+    </div>
+
+    <div id="scr-quiz" class="screen">
+        <div class="quiz-grid">
+            <div class="main-content">
+                <div id="q-narasi" class="narasi-box"></div>
+                <div id="q-text" class="question-text"></div>
+                <div id="q-options" class="options-grid"></div>
+                <div style="margin-top: 25px; display: flex; gap: 10px;">
+                    <button onclick="nav(-1)" style="padding: 12px 20px; border-radius: 10px; border: 1px solid #ddd; cursor: pointer; background: white;">Kembali</button>
+                    <button id="btn-next" onclick="nav(1)" style="flex-grow: 1; padding: 12px; border-radius: 10px; border: none; background: #1e293b; color: white; font-weight: 700; cursor: pointer;">Lanjut</button>
+                </div>
+            </div>
+            <div class="sidebar">
+                <div class="timer" id="timer">60:00</div>
+                <div id="nav-dots" class="nav-dots"></div>
+                <button onclick="confirmFinish()" style="margin-top: 20px; padding: 14px; border-radius: 10px; border: none; background: var(--success); color: white; font-weight: 800; cursor: pointer;">SELESAI</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="scr-result" class="screen">
+        <div style="text-align: center; margin: auto;">
+            <h2 style="font-size: 24px;">Ujian Selesai!</h2>
+            <p style="color: #64748b;">Nilai Anda</p>
+            <div id="final-score" style="font-size: 100px; font-weight: 900; color: var(--primary); line-height: 1;">0</div>
+            <p id="saving-status" style="font-size: 14px; margin-top: 15px;"></p>
+            <button class="btn-start" onclick="location.reload()" style="width: 200px; margin-top: 20px;">Kembali</button>
+        </div>
+    </div>
+
+    <div id="scr-admin" class="screen">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0;">Data Nilai Siswa (Cloud)</h2>
+            <button onclick="location.reload()" style="padding: 10px 20px; border-radius: 8px; border: 1px solid #ddd; cursor: pointer;">Keluar</button>
+        </div>
+        <div id="admin-data" class="admin-table-container">Menghubungkan ke Spreadsheet...</div>
+    </div>
+</div>
+
+<script>
+    const APP_URL = "https://script.google.com/macros/s/AKfycbzSJyGTWtsCd37ebJISUkAmY9TiEiewrisJMIkvnGZHfNLoeLCEP-96tJlZz6NmnIr9uA/exec";
+
+    const questions = [
+{ n: "Wilayah Nusa Tenggara Timur (NTT) memiliki karakteristik iklim kering dengan curah hujan rendah, didominasi sabana. Masyarakat mengembangkan budaya peternakan kuda dan sapi serta pengairan tradisional. Namun, perubahan iklim menyebabkan kemarau lebih panjang.", q: "Bagaimana hubungan antara kondisi geografis tersebut dengan struktur sosial dan ekonomi masyarakat lokal dalam menghadapi ancaman kekeringan ekstrem?", o: ["Kondisi iklim kering memaksa masyarakat mengubah struktur sosial dari patrilineal menjadi matrilineal.", "Keterbatasan sumber air mendorong terbentuknya solidaritas sosial yang kuat dalam pengelolaan air bersama guna menjaga stabilitas ekonomi ternak.", "Masyarakat cenderung meninggalkan sektor agraris dan beralih sepenuhnya ke sektor industri manufaktur.", "Perubahan iklim menyebabkan masyarakat menghapus seluruh hukum adat demi efisiensi perdagangan air."], a: 1 },
+        { n: "Pada tahun 1869, Terusan Suez resmi dibuka, menghubungkan Laut Tengah dengan Laut Merah. Sebelumnya, kapal dari Eropa harus mengelilingi Tanjung Harapan di Afrika Selatan untuk mencapai Nusantara.", q: "Apa dampak signifikan dari fenomena geografis-sejarah tersebut terhadap perkembangan kolonialisme di Indonesia pada akhir abad ke-19?", o: ["Perjalanan dari Eropa ke Nusantara menjadi lebih singkat, sehingga pengawasan dan mobilisasi militer Belanda semakin cepat.", "Belanda kehilangan minat pada rempah-rempah karena jalur dialihkan ke Timur Tengah.", "Terjadi penurunan imigran dari Tiongkok dan Arab karena jalur laut terlalu padat.", "Munculnya tuntutan kemerdekaan lebih awal karena ideologi liberal terhambat jarak."], a: 0 },
+        { n: "Saat isu kenaikan harga BBM, sering terjadi panic buying di SPBU. Secara sosiologi ini perilaku kolektif akibat kecemasan, secara ekonomi ini mengganggu pasar.", q: "Jika dikaitkan dengan konsep kelangkaan dan motif ekonomi, tindakan panic buying mengakibatkan...", o: ["Penurunan harga barang secara alami karena stok melimpah.", "Terciptanya keadilan distributif karena setiap orang berusaha dapat barang banyak.", "Percepatan kelangkaan (scarcity) diikuti lonjakan harga akibat ketidakseimbangan permintaan dan penawaran.", "Penguatan nilai uang karena masyarakat banyak membelanjakan tabungan."], a: 2 },
+        { n: "Jalur Sutra menjadi jalur perdagangan komoditas sekaligus penyebaran agama, teknologi, dan bahasa. Di pesisir Jawa, budaya Tiongkok, Arab, dan Hindu-Buddha berpadu.", q: "Mengapa akulturasi budaya di wilayah pesisir cenderung lebih cepat dan dinamis dibanding pedalaman?", o: ["Masyarakat pedalaman memiliki kecerdasan intelektual rendah.", "Posisi geografis pesisir sebagai pintu masuk memungkinkan interaksi sosial intensif dengan bangsa asing.", "Wilayah pedalaman dihuni penduduk tanpa sistem pemerintahan teratur.", "Perdagangan di pesisir dilarang menggunakan mata uang."], a: 1 },
+        { n: "Indonesia diprediksi mengalami puncak bonus demografi pada 2030-2035 (usia produktif melimpah). Ini peluang besar namun bisa jadi bencana jika tidak dikelola.", q: "Apa tantangan sosiologis-ekonomi terbesar agar bonus demografi tidak berubah menjadi pengangguran massal?", o: ["Membatasi jumlah kelahiran secara paksa.", "Meningkatkan kualitas SDM melalui pendidikan dan keterampilan agar mampu bersaing di pasar tenaga kerja global.", "Mewajibkan seluruh penduduk usia produktif bekerja di luar negeri.", "Menghapus teknologi otomatisasi agar pekerjaan tetap manual."], a: 1 },
+        { n: "Masa Dinasti Tang dan Sriwijaya, perdagangan laut didominasi Angin Muson. Pedagang menetap berbulan-bulan di Nusantara menunggu pergantian angin.", q: "Dampak antropologis yang paling nyata dari fenomena 'menunggu angin' tersebut bagi masyarakat pesisir adalah...", o: ["Terbentuknya perkampungan etnis khusus (seperti pekojan/pecinaan) yang memperkaya keragaman budaya lokal.", "Masyarakat lokal dipaksa meninggalkan agama asli demi bisnis.", "Munculnya konflik berdarah terus-menerus perebutan lahan.", "Hilangnya kemampuan melaut masyarakat lokal."], a: 0 },
+        { n: "Di kota besar, muncul tren gaya hidup membeli produk 'limited edition' harga mahal demi gengsi (status sosial).", q: "Apa yang dikorbankan (Opportunity Cost) oleh siswa yang menghabiskan tabungan untuk barang tren daripada buku referensi olimpiade?", o: ["Keuntungan finansial bunga bank.", "Kesempatan meningkatkan pengetahuan dan prestasi akademik yang lebih bermanfaat di masa depan.", "Nilai nominal uang yang berkurang akibat inflasi.", "Pengakuan sosial teman sekolah."], a: 1 },
+        { n: "Di Kalimantan, sungai besar (Barito, Kapuas) adalah urat nadi kehidupan dengan rumah lanting dan pasar terapung.", q: "Bagaimana pengaruh karakteristik geografis sungai terhadap sistem nilai antropologis masyarakat setempat?", o: ["Masyarakat menjadi sangat tertutup karena akses darat sulit.", "Terbentuknya budaya bahari yang memandang sungai sebagai pemersatu dan sumber berkah.", "Sungai dianggap tempat pembuangan sampah utama.", "Masyarakat cenderung individualis karena rumah terpisah air."], a: 1 },
+        { n: "Tahun 1830, Tanam Paksa diterapkan Belanda untuk mengisi kas. Rakyat dipaksa menanam komoditas ekspor.", q: "Manakah dampak positif yang 'tidak sengaja' muncul bagi perkembangan pertanian Indonesia?", o: ["Rakyat menjadi kaya raya bagi hasil kopi.", "Diperkenalkannya jenis tanaman ekspor baru, teknologi irigasi, dan sistem perkebunan modern.", "Belanda memberikan kemerdekaan lebih awal.", "Terhapusnya sistem kasta di Jawa."], a: 1 },
+        { n: "Urbanisasi tinggi ke Jakarta menyebabkan munculnya pemukiman kumuh di bantaran sungai dan risiko banjir.", q: "Upaya pemecahan masalah (solusi) yang paling tepat secara sosiologis dan tata ruang adalah...", o: ["Melarang total orang desa masuk kota.", "Penggusuran paksa tanpa tempat tinggal baru.", "Melaksanakan program desentralisasi ekonomi ke daerah asal (desa) untuk cipta lapangan kerja.", "Memperluas wilayah kumuh."], a: 2 },
+        { n: "Siklus hidrologi perkotaan terganggu beton, infiltrasi air menurun, menyebabkan banjir rutin dan kerugian ekonomi miliaran.", q: "Manakah solusi jangka panjang yang mengintegrasikan aspek geografi dan ekonomi?", o: ["Membangun tanggul raksasa tanpa mangrove.", "Menerapkan kebijakan Pajak Air Tanah tinggi dan pembangunan sumur resapan (biopori).", "Memberikan BLT kepada pedagang korban banjir.", "Memindahkan penduduk Jakarta ke pegunungan secara paksa."], a: 1 },
+        { n: "Sumpah Pemuda 1928 melebur identitas kesukuan menjadi identitas nasional sebagai proses integrasi bangsa.", q: "Apa akibat sosiologis utama Sumpah Pemuda terhadap strategi perjuangan kemerdekaan?", o: ["Perjuangan berubah menjadi perlawanan fisik total.", "Perjuangan kedaerahan berubah menjadi perjuangan nasional terorganisir di bawah cita-cita Indonesia Merdeka.", "Larangan total bahasa daerah.", "Penghapusan struktur adat di desa."], a: 1 },
+        { n: "Konflik Timur Tengah menghambat pasokan minyak dunia, harga BBM naik, biaya logistik naik, daya beli masyarakat Indonesia turun.", q: "Apa solusi ekonomi paling tepat bagi pemerintah menjaga daya beli?", o: ["Menghapus pajak kendaraan bermotor.", "Meningkatkan subsidi BBM tanpa batas.", "Melakukan diversifikasi energi ke energi terbarukan (biodiesel/surya).", "Menutup jalur ekspor barang mentah."], a: 2 },
+        { n: "Pembukaan sawit besar di Sumatra mengubah masyarakat pengumpul madu/rotan menjadi buruh kebun, merusak situs keramat hutan.", q: "Masalah utama dari perubahan struktur sosial ini ditinjau dari keberlanjutan kebudayaan adalah...", o: ["Masyarakat adat menjadi lebih kaya tetap.", "Marginalisasi budaya di mana kearifan lokal pelestarian alam hilang ditelan arus industri.", "Hilangnya hama hutan.", "Meningkatnya jumlah sekolah modern."], a: 1 },
+        { n: "Indonesia Timur rawan tsunami (Aktivitas tektonik). Pengetahuan lokal tanda alam (air surut) mulai terlupakan modernisasi.", q: "Solusi mitigasi berbasis Sosiologi-Antropologi yang paling efektif adalah...", o: ["Membangun tembok pemecah ombak sangat panjang.", "Memasang sirine impor tanpa melibatkan warga.", "Menghidupkan kembali pengetahuan lokal (folklore) tentang tanda bencana lewat kurikulum sekolah.", "Melarang penduduk bangun rumah di pantai."], a: 2 },
+        { n: "Pemuda desa pindah ke kota (urbanisasi) karena bertani dianggap tidak menguntungkan, lahan desa terbengkalai.", q: "Solusi kreatif gabungan sosiologi-ekonomi untuk memutus rantai masalah ini adalah...", o: ["Memberi subsidi uang tunai rutin.", "Mengembangkan konsep Desa Wisata berbasis komunitas yang mengelola potensi alam tanpa hapus identitas agraris.", "Menutup akses jalan menuju kota.", "Wajibkan pemuda jadi PNS."], a: 1 },
+        { n: "Stratifikasi kolonial (Eropa > Timur Asing > Pribumi) menciptakan mentalitas inlander dan westernisasi.", q: "Apa akibat jangka panjang struktur tersebut terhadap perjuangan kemerdekaan awal abad-20?", o: ["Kerja sama harmonis Eropa dan Pribumi.", "Munculnya gerakan nasionalisme dipelopori golongan terpelajar pribumi untuk meruntuhkan diskriminasi rasial.", "Timur Asing jadi penggerak militer.", "Pribumi memilih tetap di bawah Belanda."], a: 1 },
+        { n: "El Niño menyebabkan kemarau ekstrem, gagal panen nasional, harga beras melonjak (inflasi pangan).", q: "Apa solusi paling strategis agar Indonesia tidak terus bergantung pada impor saat El Niño?", o: ["Bangun mal ganti beras ke roti.", "Diversifikasi pangan (jagung, sagu) dan perbaiki sistem irigasi teknis (bendungan).", "Turunkan harga paksa.", "Ganti padi ke tanaman industri karet."], a: 1 },
+        { n: "Rendahnya literasi keuangan desa memicu investasi bodong melalui pengaruh tokoh masyarakat.", q: "Analisislah peran lembaga sosial dalam memberikan solusi!", o: ["Lembaga politik melarang menabung di bank.", "Lembaga pendidikan dan ekonomi bersinergi memberi edukasi literasi keuangan dan manajemen risiko.", "Lembaga agama melarang transaksi dagang.", "Keluarga mengisolasi anggota dari luar."], a: 1 },
+        { n: "Suku Bajo (nomaden laut) terancam karena suhu laut naik dan bom ikan merusak terumbu karang.", q: "Apa sebab utama ancaman terhadap kebudayaan suku Bajo dalam narasi tersebut?", o: ["Keinginan Bajo pindah ke darat.", "Kerusakan lingkungan fisik (geografi) yang merusak fondasi ekonomi dan identitas budaya mereka.", "Larangan pemerintah berenang.", "Bantuan teknologi modern."], a: 1 },
+        { n: "Jawa dihuni >50% penduduk meski luasnya hanya 7%. Tekanan lahan dan pengangguran tinggi terjadi akibat sejarah sentralisasi kolonial.", q: "Apa solusi strategis mewujudkan keadilan ekonomi nasional?", o: ["Bangun pagar pembatas Jawa.", "Desentralisasi pembangunan melalui proyek strategis luar Jawa (Indonesia Sentris) untuk pusat pertumbuhan baru.", "Hapus pajak perusahaan di Jawa.", "Tunjangan hidup gratis luar Jawa."], a: 1 },
+        { n: "Budaya pop global (media sosial) memicu konsumerisme remaja pada merek luar negeri demi prestise, memicu defisit dagang.", q: "Apa akibat sosiologis konsumerisme ini bagi identitas budaya lokal?", o: ["Meningkat kecintaan produk UMKM.", "Marginalisasi budaya lokal di mana simbol tradisi dianggap ketinggalan zaman.", "Kemandirian ekonomi remaja.", "Penguatan gotong royong di mal."], a: 1 },
+        { n: "Pesisir selatan Jawa punya sejarah tsunami dahsyat, tapi pembangunan hotel di bibir pantai terus naik demi pariwisata.", q: "Langkah mitigasi paling tepat tanpa mematikan ekonomi pariwisata?", o: ["Melarang total wisatawan.", "Wajibkan sertifikasi Kesiapsiagaan Bencana bagi pelaku usaha dan sediakan jalur evakuasi jelas.", "Mengeringkan air laut.", "Pindah ekonomi ke gunung."], a: 1 },
+        { n: "Konflik di Eropa Timur hambat gandum/pupuk ke Indonesia, harga mi instan dan roti naik.", q: "Fenomena ini menunjukkan bahwa dalam sistem ekonomi global saat ini...", o: ["Negara bisa berdiri sendiri.", "Adanya ketergantungan antarruang (interdependence) di mana gangguan satu wilayah berdampak pada wilayah lain.", "Konflik luar negeri tidak berdampak pada pasar lokal.", "Perang membuat petani kaya."], a: 1 },
+        { n: "Tradisi Sasi (larangan ambil hasil alam waktu tertentu) adalah teknik konservasi adat di Maluku/Papua.", q: "Jika Sasi ditinggalkan demi kejar target ekspor perikanan, apa akibat jangka panjangnya?", o: ["Masyarakat kaya raya tanpa batas.", "Kerusakan ekosistem (overfishing) yang hancurkan sumber ekonomi masa depan.", "Meningkat diplomasi perusahaan asing.", "Air laut lebih jernih."], a: 1 },
+        { n: "Tol Trans-Jawa efisiensikan logistik namun picu konversi sawah teknis jadi industri/perumahan.", q: "Apa akibat jangka panjang bagi ketahanan pangan dan solusinya?", o: ["Harga pangan turun; impor banyak.", "Penurunan produksi beras nasional picu impor; solusi penetapan Lahan Pertanian Pangan Berkelanjutan (LP2B).", "Petani bertambah; bangun mal.", "Sawah pindah ke gunung; gunduli hutan."], a: 1 },
+        { n: "Pasca 1945, Indonesia kalah senjata saat Agresi Belanda tapi menang diplomasi PBB karena persatuan rakyat.", q: "Analisislah hubungan perjuangan fisik dan diplomasi!", o: ["Fisik tidak berguna.", "Perlawanan fisik menjadi 'posisi tawar' yang membuktikan eksistensi RI di meja perundingan.", "Belanda menyerah karena kas habis bangun infrastruktur Eropa.", "Kemerdekaan hadiah sekutu."], a: 1 },
+        { n: "Ekonomi digital (QRIS) sulit bagi pedagang lansia pasar tradisional, memicu gap teknologi.", q: "Apa solusi sosiologis menjaga eksistensi pedagang kecil?", o: ["Larang QRIS; balik ke barter.", "Pendampingan dan edukasi digital oleh generasi muda/relawan secara personal.", "Ganti pasar dengan aplikasi pemerintah.", "Biarkan bangkrut (seleksi alam)."], a: 1 },
+        { n: "Karhutla akibat bakar lahan murah picu asap lintas negara dan ganggu penerbangan.", q: "Solusi tepat pertimbangkan ekonomi petani kecil dan kelestarian geografi?", o: ["Tangkap seluruh petani tanpa solusi.", "Insentif alat berat pembukaan lahan tanpa bakar (PLTB) dan pupuk kompos limbah lahan.", "Bakar hutan agar lahan luas.", "Pindah penduduk Sumatra/Kalimantan ke Jawa."], a: 1 },
+        { n: "Masyarakat mulai beralih dari Koperasi ke pinjol ilegal karena proses cepat meski bunga mencekik.", q: "Apa sebab melemahnya koperasi dan solusinya?", o: ["Koperasi terlalu kaya; bagi uang gratis.", "Kurang digitalisasi dan manajemen profesional; solusi modernisasi sistem koperasi secepat pinjol dengan bunga adil.", "Masyarakat tak suka kerja sama.", "Pemerintah larang koperasi desa."], a: 1 },
+        { n: "Hoax media sosial picu solidaritas kelompok sempit dan berujung tawuran antar-sekolah.", q: "Manakah solusi sosiologis paling efektif mencegah tawuran?", o: ["Matikan internet sekolah permanen.", "Bentuk forum komunikasi antar-pelajar lintas sekolah dan edukasi literasi digital/verifikasi informasi.", "Hukum siswa tanpa mediasi.", "Larang bawa HP di mana pun."], a: 1 },
+        { n: "Konstantinopel jatuh 1453, Jalur Sutra darat tutup, harga rempah Eropa naik, memicu penjelajahan samudra ke Nusantara.", q: "Bagaimana dampaknya bagi kerajaan Nusantara abad-16?", o: ["Kerajaan jadi sekutu setara Eropa.", "Peralihan sistem dagang bebas menjadi monopoli paksa Eropa yang memicu konflik dan perlawanan.", "Eropa beri teknologi industri gratis.", "Kerajaan berhenti dagang rempah."], a: 1 },
+        { n: "Deforestasi hulu sungai picu lumpur yang dangkal waduk PLTA dan irigasi sawah.", q: "Apa solusi teknis-geografis menyelamatkan pasokan listrik dan pangan?", o: ["Keruk lumpur tiap hari tanpa stop gunduli hutan.", "Reforestasi hulu dan bangun terasering di lahan miring untuk tahan laju erosi.", "Ganti PLTA ke batubara.", "Alirkan air langsung ke laut."], a: 1 },
+        { n: "Revolusi Industri 4.0 (AI/Otomatisasi) tingkatkan produksi tapi kurangi tenaga kerja perakitan manual.", q: "Manakah solusi tepat mengatasi pengangguran struktural buruh?", o: ["Larang mesin/komputer.", "Pemerintah dan perusahaan kerja sama program reskilling (pelatihan ulang) pengoperasian mesin otomatis.", "Beri pesangon tanpa arahan.", "Tutup pabrik canggih."], a: 1 },
+        { n: "Indonesia terletak di jalur Cincin Api Pasifik (Ring of Fire), yang membuatnya memiliki ratusan gunung berapi aktif.", q: "Manakah dampak geologis paling signifikan bagi kesuburan tanah di Indonesia akibat fenomena ini?", o: ["Peningkatan risiko tsunami", "Terbentuknya tanah vulkanik yang kaya unsur hara", "Penurunan suhu udara global", "Pencairan es di kutub"], a: 1 },
+        { n: "Selat Malaka telah menjadi urat nadi perdagangan dunia sejak berabad-abad lalu, menghubungkan Samudra Hindia dan Samudra Pasifik.", q: "Bagaimana posisi strategis ini memengaruhi perkembangan sosial-budaya bangsa Indonesia?", o: ["Menjadikan bangsa Indonesia tertutup dari dunia", "Memicu akulturasi budaya akibat interaksi dengan pedagang asing", "Hanya menguntungkan sektor pertanian", "Menghambat masuknya agama baru"], a: 1 },
+        { n: "Penduduk di wilayah Nusa Tenggara Timur menghadapi musim kemarau yang lebih panjang dibanding wilayah lain di Indonesia.", q: "Bentuk adaptasi ekonomi masyarakat lokal terhadap kondisi iklim tersebut biasanya berupa...", o: ["Fokus pada penanaman padi sawah", "Pengembangan sektor peternakan sapi dan kuda", "Pembangunan gedung pencakar langit", "Menghapuskan sistem barter"], a: 1 },
+        { n: "Bonus demografi diprediksi akan terjadi di Indonesia pada tahun 2030-2045, di mana penduduk usia produktif sangat melimpah.", q: "Tantangan sosiologis utama agar bonus demografi tidak menjadi beban negara adalah...", o: ["Membatasi jumlah kelahiran secara paksa", "Meningkatkan kualitas SDM melalui pendidikan dan keterampilan", "Mengurangi penggunaan teknologi otomatis", "Memusatkan seluruh penduduk di satu pulau"], a: 1 },
+        { n: "Kenaikan harga BBM biasanya diikuti dengan kenaikan harga kebutuhan pokok lainnya di pasar.", q: "Dalam ilmu ekonomi, fenomena ini disebut sebagai salah satu pemicu...", o: ["Deflasi", "Inflasi", "Investasi", "Subsidi"], a: 1 },
+        { n: "Kerajaan Majapahit berhasil mempersatukan Nusantara di bawah Sumpah Palapa Gajah Mada.", q: "Faktor utama yang menyebabkan kemunduran kerajaan besar ini secara internal adalah...", o: ["Serangan dari bangsa Mongol", "Terjadinya perang saudara (Perang Paregreg)", "Masuknya teknologi modern", "Beralihnya rakyat ke sektor industri"], a: 1 },
+        { n: "Pembangunan jalan tol Trans-Jawa memotong waktu tempuh pengiriman logistik antarprovinsi.", q: "Dampak langsung dari interaksi antarruang ini bagi harga barang di pasar adalah...", o: ["Harga barang menjadi semakin mahal", "Stabilitas harga lebih terjaga karena distribusi lancar", "Persediaan barang akan berkurang", "Pasar tradisional akan hilang"], a: 1 },
+        { n: "Masyarakat Baduy di Banten membagi wilayah mereka menjadi Baduy Dalam yang tertutup dan Baduy Luar yang lebih terbuka.", q: "Mengapa Baduy Dalam sangat membatasi penggunaan teknologi modern dari luar?", o: ["Karena mereka tidak mampu membeli teknologi", "Untuk menjaga kemurnian adat istiadat dan kearifan lokal", "Karena dilarang oleh pemerintah pusat", "Karena wilayah mereka tidak memiliki sinyal"], a: 1 },
+        { n: "Lembaga ekonomi seperti Bank Indonesia memiliki peran vital dalam menjaga stabilitas nilai mata uang.", q: "Kebijakan Bank Indonesia untuk menaikkan suku bunga bertujuan untuk...", o: ["Mendorong masyarakat berbelanja mewah", "Mengendalikan jumlah uang beredar agar inflasi terjaga", "Memberikan pinjaman gratis kepada warga", "Menghapus penggunaan uang kertas"], a: 1 },
+        { n: "Hutan hujan tropis Indonesia merupakan salah satu ekosistem paling kaya di dunia namun terancam oleh deforestasi.", q: "Fungsi hidrologis hutan bagi masyarakat sekitar adalah...", o: ["Sebagai tempat berburu hewan langka", "Menyimpan cadangan air tanah dan mencegah banjir", "Sebagai penyedia kayu bakar tak terbatas", "Menghilangkan kabut di pegunungan"], a: 1 },
+        { n: "Pada masa kolonial, kebijakan Tanam Paksa (Cultuurstelsel) menyebabkan penderitaan hebat bagi rakyat Indonesia.", q: "Sisi positif yang secara tidak sengaja didapatkan rakyat Indonesia dari kebijakan ini adalah...", o: ["Rakyat menjadi kaya raya", "Dikenalkannya jenis tanaman ekspor dan teknologi irigasi baru", "Belanda memberikan kemerdekaan lebih cepat", "Hilangnya sistem kasta di masyarakat"], a: 1 },
+        { n: "Urbanisasi yang terlalu cepat menyebabkan timbulnya daerah kumuh (slum area) di pinggiran kota besar.", q: "Solusi sosiologis yang paling tepat untuk mengatasi kepadatan di kota adalah...", o: ["Mengusir warga pendatang secara paksa", "Pemerataan pembangunan industri dan fasilitas ke daerah pedesaan", "Membangun tembok di perbatasan kota", "Menaikkan pajak bagi pendatang baru"], a: 1 },
+        { n: "Suku Bajo di Sulawesi dikenal sebagai pengembara laut yang memiliki kemampuan menyelam luar biasa.", q: "Perubahan pola hidup mereka dari nomaden di laut menjadi menetap di pesisir disebabkan oleh...", o: ["Larangan pemerintah untuk melaut", "Keinginan untuk mendapatkan akses pendidikan dan kesehatan", "Ikan di laut sudah habis", "Perubahan warna air laut"], a: 1 },
+        { n: "Mata uang Rupiah mengalami fluktuasi nilai tukar terhadap Dollar Amerika setiap harinya.", q: "Apa dampak yang dirasakan pengusaha lokal yang mengimpor bahan baku dari luar negeri jika Rupiah melemah?", o: ["Keuntungan meningkat drastis", "Biaya produksi meningkat sehingga harga jual barang naik", "Bahan baku menjadi lebih murah", "Pajak impor dihapuskan"], a: 1 },
+        { n: "Peristiwa Rengasdengklok terjadi akibat perbedaan pendapat antara golongan muda dan golongan tua mengenai proklamasi.", q: "Tujuan utama golongan muda membawa Soekarno-Hatta ke Rengasdengklok adalah...", o: ["Menyembunyikan mereka dari rakyat", "Agar tidak terpengaruh oleh janji kemerdekaan dari Jepang", "Untuk merundingkan pembagian jabatan", "Menunggu bantuan dari sekutu"], a: 1 },
+        { n: "Pemanasan global menyebabkan kenaikan permukaan air laut yang mengancam desa-desa pesisir.", q: "Langkah mitigasi berbasis lingkungan yang paling berkelanjutan adalah...", o: ["Membangun tembok beton raksasa", "Rehabilitasi hutan mangrove di sepanjang garis pantai", "Memindahkan seluruh penduduk ke gunung", "Mengeruk pasir laut untuk dijual"], a: 1 },
+        { n: "Koperasi sekolah mengajarkan siswa mengenai nilai-nilai demokrasi dan kejujuran dalam berekonomi.", q: "Sesuai UUD 1945, perekonomian Indonesia disusun sebagai usaha bersama berdasar atas asas...", o: ["Kekuasaan", "Kekeluargaan", "Persaingan bebas", "Keuntungan pribadi"], a: 1 },
+        { n: "Masyarakat pegunungan memiliki pola pemukiman yang mengelompok di dekat lahan pertanian.", q: "Faktor geografi yang paling menentukan pola pemukiman tersebut adalah...", o: ["Ketersediaan air dan akses jalan", "Jumlah sekolah yang ada", "Warna tanah di wilayah tersebut", "Arah tiup angin muson"], a: 0 },
+        { n: "Globalisasi menyebabkan masuknya budaya pop luar negeri yang sangat disukai generasi muda Indonesia.", q: "Bagaimana cara terbaik menjaga jati diri bangsa di tengah arus globalisasi?", o: ["Menutup diri sepenuhnya dari budaya asing", "Menyaring budaya asing dan tetap melestarikan budaya lokal", "Mewajibkan penggunaan bahasa daerah setiap hari", "Menghapus internet di seluruh wilayah"], a: 1 },
+        { n: "Sistem kasta pada masa kerajaan Hindu membagi masyarakat ke dalam empat golongan utama.", q: "Golongan yang bertugas sebagai pemimpin pemerintahan dan prajurit adalah kasta...", o: ["Brahmana", "Ksatria", "Waisya", "Sudra"], a: 1 },
+        { n: "Indonesia memiliki dua musim yaitu hujan dan kemarau karena dipengaruhi oleh angin muson.", q: "Angin Muson Barat yang bertiup dari Asia ke Australia menyebabkan Indonesia mengalami musim...", o: ["Kemarau", "Hujan", "Pancaroba", "Salju"], a: 1 },
+        { n: "Kebutuhan manusia dibedakan menjadi primer, sekunder, dan tersier.", q: "Manakah contoh kebutuhan primer bagi seorang siswa?", o: ["Smartphone terbaru", "Buku pelajaran dan alat tulis", "Sepeda motor sport", "Liburan ke luar negeri"], a: 1 },
+        { n: "Lembaga sosial seperti sekolah berfungsi sebagai tempat sosialisasi sekunder.", q: "Apa fungsi manifes (utama) dari lembaga pendidikan bagi siswa?", o: ["Sebagai tempat mencari teman bermain", "Membekali individu dengan pengetahuan dan keterampilan", "Mengurangi beban orang tua di rumah", "Menunda masa kedewasaan anak"], a: 1 },
+        { n: "Prasasti Yupa dari Kerajaan Kutai membuktikan dimulainya zaman sejarah di Indonesia.", q: "Zaman sejarah ditandai dengan ditemukannya...", o: ["Alat-alat dari batu", "Peninggalan berupa tulisan", "Bangunan candi yang megah", "Fosil manusia purba"], a: 1 },
+        { n: "Perdagangan online (e-commerce) memudahkan transaksi tanpa tatap muka.", q: "Risiko ekonomi yang paling mungkin timbul bagi konsumen dalam transaksi digital adalah...", o: ["Harga barang menjadi terlalu murah", "Ketidaksesuaian kualitas barang dengan deskripsi gambar", "Barang tidak mungkin sampai ke alamat", "Penurunan kecepatan internet"], a: 1 },
+        { n: "Gerakan separatisme seringkali dipicu oleh rasa ketidakadilan pembangunan di daerah.", q: "Upaya sosiologis pemerintah untuk menjaga integrasi nasional adalah...", o: ["Melakukan operasi militer besar-besaran", "Penerapan Otonomi Daerah dan pemerataan pembangunan", "Mewajibkan satu bahasa daerah saja", "Memindahkan ibukota ke luar negeri"], a: 1 },
+        { n: "Indonesia merupakan negara agraris namun saat ini banyak lahan sawah berubah fungsi menjadi industri.", q: "Dampak jangka panjang bagi ketahanan pangan nasional adalah...", o: ["Produksi beras akan meningkat", "Ketergantungan tinggi terhadap impor pangan", "Harga pangan menjadi sangat murah", "Petani menjadi semakin kaya"], a: 1 },
+        { n: "Situs Sangiran merupakan salah satu pusat penemuan fosil manusia purba dunia.", q: "Manusia purba yang ditemukan oleh Eugene Dubois di Jawa adalah...", o: ["Meganthropus Paleojavanicus", "Pithecanthropus Erectus", "Homo Sapiens", "Homo Soloensis"], a: 1 },
+        { n: "Uang kertas memiliki nilai nominal dan nilai intrinsik.", q: "Nilai yang tertera pada setiap lembar uang kertas disebut nilai...", o: ["Intrinsik", "Nominal", "Riil", "Kurs"], a: 1 },
+        { n: "Masyarakat di pesisir pantai biasanya memiliki karakter bicara yang keras dan lugas.", q: "Hal ini secara sosiologis dipengaruhi oleh...", o: ["Kondisi alam yang bising oleh suara ombak", "Tingkat pendidikan yang rendah", "Sering mengonsumsi makanan pedas", "Peraturan adat setempat"], a: 0 },
+        { n: "Bencana kabut asap di Sumatra dan Kalimantan sering disebabkan oleh kebakaran hutan.", q: "Dampak lintas negara (regional) dari fenomena geografi ini adalah...", o: ["Terjadinya gempa di Malaysia", "Gangguan kesehatan dan penerbangan di negara tetangga", "Peningkatan curah hujan di Singapura", "Munculnya pulau baru di laut"], a: 1 },
+        { n: "Pahlawan nasional Cut Nyak Dien melakukan perlawanan sengit terhadap Belanda di Aceh.", q: "Apa ciri khas taktik gerilya yang digunakan pejuang Indonesia?", o: ["Melakukan serangan terbuka di lapangan luas", "Serangan mendadak dan sembunyi-sembunyi di hutan", "Menunggu musuh di benteng pertahanan", "Melakukan perundingan damai terus-menerus"], a: 1 },
+        { n: "Tindakan ekonomi harus didasari oleh prinsip ekonomi yang tepat.", q: "Prinsip ekonomi adalah berusaha dengan pengorbanan tertentu untuk mendapatkan...", o: ["Hasil yang sekecil-kecilnya", "Hasil yang maksimal", "Pujian dari orang lain", "Modal yang besar"], a: 1 },
+        { n: "Konflik sosial dapat diselesaikan melalui mediasi dengan bantuan pihak ketiga.", q: "Syarat utama pihak ketiga dalam mediasi adalah...", o: ["Harus membela salah satu pihak", "Harus bersifat netral dan tidak memihak", "Memiliki jabatan yang paling tinggi", "Berasal dari keluarga korban"], a: 1 },
+        
+        // INPUT SOAL BARU (35 - 50)
+        { n: "Sebuah desa adat sakral dibuka menjadi destinasi internasional. Masuknya turis membawa budaya baru yang mulai ditiru remaja desa. Ritual adat yang dulunya sakral kini hanya dianggap hiburan demi uang (komersialisasi).", q: "Bagaimana solusi terbaik untuk menjaga keseimbangan antara pendapatan ekonomi dan pelestarian nilai budaya asli?", o: ["Menutup total desa adat dari wisatawan asing selamanya", "Menerapkan konsep pariwisata berbasis komunitas (tokoh adat mengatur zonasi wilayah)", "Mengubah seluruh ritual adat menjadi tarian modern", "Memaksa seluruh turis untuk tinggal menetap"], a: 1 },
+        { n: "Desa Makmur terletak di kaki gunung. Hutan di atas gunung ditebang liar. Ketika hujan deras, air langsung turun ke desa membawa lumpur.", q: "Apa langkah paling tepat yang harus dilakukan penduduk desa untuk mencegah bencana di masa depan?", o: ["Membangun pagar beton yang tinggi", "Melakukan penanaman kembali (reboisasi) di lahan hutan gundul", "Menjual rumah dan pindah ke kota", "Membuang sampah plastik ke aliran sungai"], a: 1 },
+        { n: "Andi memiliki uang Rp20.000. Ia haus setelah olahraga. Di kantin ada buku tulis (Rp10.000), es jeruk (Rp5.000), dan mainan (Rp15.000).", q: "Jika Andi mendahului kebutuhan primer/mendesak, maka urutan tindakan Andi yang benar adalah...", o: ["Membeli es jeruk dulu untuk haus, lalu membeli buku tulis", "Membeli mobil-mobilan karena ia sukai", "Membeli es jeruk sebanyak 4 gelas", "Menabung seluruh uangnya"], a: 0 },
+        { n: "Dalam pertandingan sepak bola antar kelas, terjadi perselisihan pelanggaran. Guru olahraga datang memanggil kedua ketua kelas untuk mencari jalan tengah.", q: "Peran guru olahraga tersebut termasuk dalam bentuk interaksi sosial akomodasi yang disebut...", o: ["Persaingan", "Mediasi (Pihak ketiga yang membantu perdamaian)", "Kerja sama", "Pertikaian"], a: 1 },
+        { n: "Candi Borobudur memiliki relief Sang Buddha, namun bentuk bangunannya berundak-undak menunjukkan ciri asli zaman megalitikum Indonesia.", q: "Perpaduan antara kebudayaan India dan Indonesia pada Candi Borobudur disebut...", o: ["Modernisasi", "Kolonialisasi", "Akulturasi", "Globalisasi"], a: 2 },
+        { n: "Indonesia memiliki suku dan bahasa daerah berbeda. Orang pesisir biasa bicara keras karena suara ombak, orang lain bicara lembut.", q: "Hal ini membuktikan bahwa perbedaan budaya di Indonesia sangat dipengaruhi oleh...", o: ["Perbedaan jenis makanan", "Letak geografis dan kondisi alam", "Jumlah uang yang dimiliki", "Peraturan pemerintah pusat"], a: 1 },
+        { n: "Indonesia terletak di garis khatulistiwa (0 Lintang), hanya memiliki dua musim, dan matahari sepanjang tahun.", q: "Apa keuntungan utama dari letak astronomis tersebut bagi sektor pertanian?", o: ["Menanam berbagai jenis tanaman sepanjang tahun tanpa salju", "Tanah menjadi sangat kering sehingga tidak perlu disiram", "Tanaman tidak memerlukan pupuk", "Penghasil gandum terbesar di dunia"], a: 0 },
+        { n: "Pasar tradisional menjadi tempat bertemunya penjual ikan, penjual sayur, dan pembeli. Terjadi tawar-menawar hingga harga disepakati.", q: "Berdasarkan fungsi ekonomi, pasar dalam narasi di atas berperan sebagai...", o: ["Tempat membuang barang tidak laku", "Sarana distribusi barang dari produsen ke konsumen", "Tempat pamer kekayaan penduduk kota", "Sarana memonopoli harga barang"], a: 1 },
+        { n: "Siska berpamitan dan mencium tangan orang tua sebelum sekolah. Siska juga selalu berbicara sopan kepada orang tua.", q: "Tindakan Siska merupakan contoh dari pelaksanaan norma...", o: ["Norma Hukum", "Norma Kesopanan", "Norma Agama", "Norma Kebersihan"], a: 1 },
+        { n: "Ir. Soekarno dan Drs. Moh. Hatta membacakan Proklamasi 17 Agustus 1945 setelah berjuang melalui jalur diplomasi sejak muda.", q: "Mengapa proklamasi dianggap sebagai peristiwa paling penting bagi bangsa Indonesia?", o: ["Rakyat langsung menjadi kaya", "Menandai lahirnya negara Indonesia yang bebas penjajahan", "Tanda dimulainya kerjasama dengan penjajah", "Dilakukan di rumah pahlawan"], a: 1 },
+        { n: "Sungai di Jawa umumnya pendek untuk irigasi sawah. Sungai di Kalimantan lebar dan dalam untuk sarana transportasi kapal besar.", q: "Mengapa terdapat perbedaan fungsi sungai tersebut?", o: ["Penduduk Jawa tidak suka naik kapal", "Kondisi geografis daratan Jawa yang bergunung dan Kalimantan yang landai", "Air sungai Jawa lebih bersih", "Pemerintah hanya membangun jalan raya di Jawa"], a: 1 },
+        { n: "Seorang siswa membeli alat tulis dan seragam sekolah di awal tahun ajaran baru.", q: "Nama kegiatan ekonomi yang dilakukan oleh siswa tersebut adalah...", o: ["Produksi", "Distribusi", "Konsumsi", "Investasi"], a: 2 },
+        { n: "Pak Budi dulunya buruh tani. Karena ketekunannya menyekolahkan anaknya, kini anaknya menjadi dokter sukses dan membelikan rumah layak.", q: "Perubahan status sosial keluarga Pak Budi ini disebut...", o: ["Mobilitas Sosial Vertikal Naik", "Mobilitas Sosial Horizontal", "Konflik Sosial antar kelas", "Penurunan Status Sosial"], a: 0 },
+        { n: "Indonesia sering mengalami gempa bumi. Jika kita sedang berada di dalam kelas dan tiba-tiba terjadi gempa kuat, tindakan pertama adalah...", o: ["Berlari secepat mungkin menuju lift", "Bersembunyi di bawah meja kokoh untuk melindungi kepala", "Berteriak sekencang mungkin", "Tetap duduk dan melanjutkan pelajaran"], a: 1 },
+        { n: "Agama Islam masuk melalui jalur perdagangan. Pedagang Gujarat dan Arab berdagang sambil menyebarkan Islam secara damai.", q: "Mengapa agama Islam dapat diterima dengan cepat oleh masyarakat Indonesia saat itu?", o: ["Disebarkan dengan paksaan", "Islam tidak mengenal sistem kasta (persamaan derajat)", "Pedagang memberikan uang kepada penduduk", "Islam hanya boleh dipelajari raja"], a: 1 },
+        { n: "Di sebuah desa terjadi musim kemarau panjang. Sumur kering sehingga warga harus mengantre air bersih dari bantuan pemerintah.", q: "Keadaan di mana air bersih sulit didapatkan sementara kebutuhan sangat banyak disebut...", o: ["Kemakmuran", "Kelangkaan", "Pemborosan", "Distribusi"], a: 1 }
+    ];
+
+    let currentIdx = 0;
+    let userAnswers = new Array(50).fill(null);
+    let timer;
+    let timeLeft = 3600;
+
+    function startQuiz() {
+        if(!document.getElementById('ipt-nama').value || !document.getElementById('ipt-kelas').value) return alert("Nama dan Kelas wajib diisi!");
+        document.getElementById('scr-login').classList.remove('active');
+        document.getElementById('scr-quiz').classList.add('active');
+        startTimer(); renderDots(); showQ();
+        try { document.documentElement.requestFullscreen(); } catch(e){}
+    }
+
+    function showQ() {
+        const q = questions[currentIdx];
+        document.getElementById('q-narasi').innerText = q.n;
+        document.getElementById('q-text').innerText = `${currentIdx + 1}. ${q.q}`;
+        const box = document.getElementById('q-options');
+        box.innerHTML = '';
+        q.o.forEach((txt, i) => {
+            const d = document.createElement('div');
+            d.className = `opt ${userAnswers[currentIdx] === i ? 'selected' : ''}`;
+            d.innerHTML = `<b>${String.fromCharCode(65+i)}.</b> ${txt}`;
+            d.onclick = () => { userAnswers[currentIdx] = i; showQ(); renderDots(); };
+            box.appendChild(d);
+        });
+        document.getElementById('btn-next').innerText = currentIdx === 49 ? "KIRIM" : "Lanjut";
+    }
+
+    function nav(dir) {
+        if(currentIdx === 49 && dir === 1) return confirmFinish();
+        currentIdx += dir;
+        if(currentIdx < 0) currentIdx = 0;
+        showQ(); renderDots();
+    }
+
+    function renderDots() {
+        const box = document.getElementById('nav-dots');
+        box.innerHTML = '';
+        for(let i=0; i<50; i++) {
+            const b = document.createElement('button');
+            b.className = `dot ${userAnswers[i] !== null ? 'green' : 'red'} ${currentIdx === i ? 'active' : ''}`;
+            b.innerText = i + 1;
+            b.onclick = () => { currentIdx = i; showQ(); renderDots(); };
+            box.appendChild(b);
+        }
+    }
+
+    function startTimer() {
+        timer = setInterval(() => {
+            timeLeft--;
+            let m = Math.floor(timeLeft/60), s = timeLeft%60;
+            document.getElementById('timer').innerText = `${m}:${s<10?'0'+s:s}`;
+            if(timeLeft <= 0) finish();
+        }, 1000);
+    }
+
+    function confirmFinish() {
+        if(confirm("Yakin ingin menyelesaikan ujian dan mengirim jawaban?")) finish();
+    }
+
+    function finish() {
+        clearInterval(timer);
+        let score = 0;
+        questions.forEach((q, i) => { if(userAnswers[i] === q.a) score += 2; });
+        document.getElementById('final-score').innerText = score;
+        document.getElementById('scr-quiz').classList.remove('active');
+        document.getElementById('scr-result').classList.add('active');
+
+        const payload = {
+            nama: document.getElementById('ipt-nama').value,
+            kelas: document.getElementById('ipt-kelas').value,
+            hp: document.getElementById('ipt-hp').value,
+            skor: score,
+            waktu: new Date().toLocaleString()
+        };
+
+        const statusText = document.getElementById('saving-status');
+        statusText.innerText = "Sedang menyimpan nilai ke Cloud...";
+
+        fetch(APP_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify(payload)
+        }).then(() => {
+            statusText.innerText = "Data berhasil disimpan di Spreadsheet!";
+            statusText.style.color = "var(--success)";
+        }).catch(() => {
+            statusText.innerText = "Gagal menyimpan ke Cloud. Cek internet Anda.";
+            statusText.style.color = "var(--danger)";
+        });
+
+        if (document.exitFullscreen) document.exitFullscreen();
+    }
+
+    function openAdmin() {
+        if(prompt("Masukkan PIN Panel Admin:") === "2026") {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('scr-admin').classList.add('active');
+            fetch(APP_URL).then(res => res.json()).then(data => {
+                let h = '<table><tr>';
+                data[0].forEach(cell => h += `<th>${cell}</th>`);
+                h += '</tr>';
+                for(let i=1; i<data.length; i++) {
+                    h += '<tr>';
+                    data[i].forEach(cell => h += `<td>${cell}</td>`);
+                    h += '</tr>';
+                }
+                document.getElementById('admin-data').innerHTML = h + '</table>';
+            }).catch(() => {
+                document.getElementById('admin-data').innerText = "Gagal memuat data. Pastikan URL Web App benar.";
+            });
+        }
+    }
+</script>
+</body>
+</html>
